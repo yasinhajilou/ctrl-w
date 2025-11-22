@@ -142,8 +142,42 @@ userSchema.pre('save', async function (next) {
 
 userSchema.methods.comparePassword = async function (candidatePassword) {
   try {
-    return await bcrypt.compare(candidatePassword , this.password)
+    return await bcrypt.compare(candidatePassword, this.password);
   } catch (error) {
     throw new Error('Password comparison failed');
   }
 };
+
+/**
+ * Static Method: Find By Credentials
+ *
+ * PURPOSE:
+ * Helper method to find user and validate password in one call
+ * Makes login logic cleaner
+ *
+ * STATIC vs INSTANCE:
+ * - Static: Called on Model (User.findByCredentials)
+ * - Instance: Called on document (user.comparePassword)
+ *
+ * USAGE:
+ * const user = await User.findByCredentials('email@example.com', 'password123');
+ */
+
+userSchema.statics.findByCredentials = async function (email, password) {
+  const user = await this.findOne({ email }).select('+password');
+  if (!user) {
+    throw new Error('Invalid credentials');
+  }
+
+  const isMatch = await user.comparePassword(password);
+
+  if (!isMatch) {
+    throw new Error('Invalid credentials');
+  }
+
+  return user;
+};
+
+const User = mongoose.model('User' , userSchema)
+
+export default User;
