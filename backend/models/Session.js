@@ -91,3 +91,39 @@ const sessionSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+
+/**
+ * Indexes
+ * 
+ * COMPOUND INDEX:
+ * Optimize queries that filter by multiple fields
+ * 
+ * Example: Find active sessions by creator
+ * db.sessions.find({ creator: userId, status: 'active' })
+ */
+sessionSchema.index({ creator: 1, status: 1 });
+sessionSchema.index({ status: 1, expiresAt: 1 });
+
+/**
+ * TTL Index (Time-To-Live)
+ * 
+ * PURPOSE:
+ * Automatically delete documents after they expire
+ * 
+ * HOW IT WORKS:
+ * MongoDB checks every 60 seconds for documents where:
+ * - expiresAt < current time
+ * - Deletes matching documents automatically
+ * 
+ * INTERVIEW NOTE:
+ * "TTL indexes are perfect for temporary data like sessions, OTPs, or cache.
+ * MongoDB handles cleanup automatically, so we don't need cron jobs for
+ * simple cases. For complex cleanup (cascading deletes), I'd use cron."
+ * 
+ * LIMITATION:
+ * - Runs every 60 seconds (not instant deletion)
+ * - Single field only (can't do compound TTL)
+ */
+sessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
