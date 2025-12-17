@@ -16,6 +16,12 @@
  * import File from './models/File.js';
  */
 
+
+/*
+*
+ Import only what you need:
+ import { User, Message } from './models';
+*/
 import User from './User.js';
 import Session from './Session.js';
 import Message from './Message.js';
@@ -23,7 +29,11 @@ import File from './File.js';
 
 export { User, Session, Message, File };
 
-// Default export for convenience
+/*
+*
+Import all models as a single object:
+import models from './models';
+*/
 export default {
   User,
   Session,

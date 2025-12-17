@@ -65,7 +65,7 @@ const sessionSchema = new mongoose.Schema(
       index: true,
       //Different date for each session, based on creation time(Dynamic value)
       default: () => {
-        const minutes = parsInt(process.env.SESSION_EXPIRY_MINUTES) || 30;
+        const minutes = parseInt(process.env.SESSION_EXPIRY_MINUTES) || 30;
         return new Date(Date.now() + minutes * 60 * 1000);
       },
     },
