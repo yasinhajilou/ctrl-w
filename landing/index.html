@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ctrl+w — Real-Time Device Sync</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0a0a0f;
+      --bg-secondary: #12121a;
+      --bg-card: #16161f;
+      --accent: #00d4aa;
+      --accent-dim: rgba(0, 212, 170, 0.15);
+      --accent-glow: rgba(0, 212, 170, 0.4);
+      --text-primary: #f0f0f5;
+      --text-secondary: #8888a0;
+      --text-dim: #55556a;
+      --border: #2a2a3a;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Animated background grid */
+    .bg-grid {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        linear-gradient(rgba(0, 212, 170, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 212, 170, 0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Navigation */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 20px 0;
+      background: rgba(10, 10, 15, 0.8);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+    }
+
+    nav .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--accent);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: var(--accent);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-icon svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.95rem;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: var(--accent);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 500;
+      text-decoration: none;
+      transition: all 0.3s ease;
+      font-size: 0.95rem;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: var(--bg-primary);
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 0 30px var(--accent-glow);
+      transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* Hero Section */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding-top: 80px;
+    }
+
+    .hero-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: center;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: var(--accent-dim);
+      border: 1px solid rgba(0, 212, 170, 0.3);
+      border-radius: 100px;
+      font-size: 0.85rem;
+      color: var(--accent);
+      margin-bottom: 24px;
+      animation: fadeInUp 0.6s ease;
+    }
+
+    .hero-badge::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .hero h1 {
+      font-size: 4rem;
+      font-weight: 700;
+      line-height: 1.1;
+      margin-bottom: 24px;
+      animation: fadeInUp 0.6s ease 0.1s both;
+    }
+
+    .hero h1 span {
+      color: var(--accent);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .hero-description {
+      font-size: 1.2rem;
+      color: var(--text-secondary);
+      margin-bottom: 32px;
+      max-width: 500px;
+      animation: fadeInUp 0.6s ease 0.2s both;
+    }
+
+    .hero-buttons {
+      display: flex;
+      gap: 16px;
+      animation: fadeInUp 0.6s ease 0.3s both;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Device Animation */
+    .hero-visual {
+      position: relative;
+      animation: fadeIn 1s ease 0.4s both;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .device-demo {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 40px;
+    }
+
+    .device {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      position: relative;
+    }
+
+    .device-phone {
+      width: 120px;
+      height: 200px;
+    }
+
+    .device-laptop {
+      width: 220px;
+      height: 150px;
+    }
+
+    .device-screen {
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      padding: 12px;
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    .device-msg {
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.7rem;
+      animation: msgAppear 0.4s ease both;
+    }
+
+    .device-msg.sent {
+      background: var(--accent);
+      color: var(--bg-primary);
+      margin-left: auto;
+      animation-delay: 1s;
+    }
+
+    .device-msg.received {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      margin-right: auto;
+      animation-delay: 1.5s;
+    }
+
+    @keyframes msgAppear {
+      from {
+        opacity: 0;
+        transform: scale(0.8);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    .sync-line {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 60px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      animation: syncPulse 2s ease-in-out infinite;
+    }
+
+    .sync-dot {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 12px;
+      height: 12px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 20px var(--accent-glow);
+      animation: syncDot 2s ease-in-out infinite;
+    }
+
+    @keyframes syncPulse {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 1; }
+    }
+
+    @keyframes syncDot {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); }
+      50% { transform: translate(-50%, -50%) scale(1.3); }
+    }
+
+    /* Sections */
+    section {
+      padding: 120px 0;
+    }
+
+    .section-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-size: 2.5rem;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+
+    .section-description {
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin-bottom: 48px;
+    }
+
+    /* Features Grid */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+      transition: all 0.3s ease;
+    }
+
+    .feature-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-4px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--accent-dim);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .feature-icon svg {
+      width: 24px;
+      height: 24px;
+      stroke: var(--accent);
+    }
+
+    .feature-card h3 {
+      font-size: 1.2rem;
+      margin-bottom: 12px;
+    }
+
+    .feature-card p {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+
+    /* Tech Stack */
+    .tech-section {
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tech-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .tech-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    .tech-item:hover {
+      border-color: var(--accent);
+    }
+
+    .tech-item .name {
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .tech-item .desc {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+    }
+
+    /* Learning Journey */
+    .journey-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: center;
+    }
+
+    .journey-text h3 {
+      font-size: 1.5rem;
+      margin-bottom: 16px;
+    }
+
+    .journey-text p {
+      color: var(--text-secondary);
+      margin-bottom: 24px;
+    }
+
+    .learning-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .learning-list li {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--text-secondary);
+    }
+
+    .learning-list li::before {
+      content: '→';
+      color: var(--accent);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .claude-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: linear-gradient(135deg, #d97706, #f59e0b);
+      padding: 12px 20px;
+      border-radius: 12px;
+      margin-top: 24px;
+    }
+
+    .claude-badge span {
+      font-weight: 500;
+      color: #fff;
+    }
+
+    /* Code Preview */
+    .code-preview {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 16px 20px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .code-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .code-dot.red { background: #ff5f56; }
+    .code-dot.yellow { background: #ffbd2e; }
+    .code-dot.green { background: #27ca40; }
+
+    .code-body {
+      padding: 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      line-height: 1.8;
+    }
+
+    .code-body .comment {
+      color: var(--text-dim);
+    }
+
+    .code-body .keyword {
+      color: #c678dd;
+    }
+
+    .code-body .string {
+      color: #98c379;
+    }
+
+    .code-body .function {
+      color: #61afef;
+    }
+
+    /* Topics Covered */
+    .topics-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+
+    .topic-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      transition: all 0.3s ease;
+    }
+
+    .topic-card:hover {
+      border-color: var(--accent);
+    }
+
+    .topic-number {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--accent);
+      background: var(--accent-dim);
+      padding: 4px 10px;
+      border-radius: 6px;
+    }
+
+    .topic-card h4 {
+      margin-bottom: 8px;
+    }
+
+    .topic-card p {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    /* CTA Section */
+    .cta-section {
+      text-align: center;
+      padding: 100px 0;
+    }
+
+    .cta-section h2 {
+      font-size: 2.5rem;
+      margin-bottom: 16px;
+    }
+
+    .cta-section p {
+      color: var(--text-secondary);
+      font-size: 1.1rem;
+      margin-bottom: 32px;
+    }
+
+    .cta-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    /* Footer */
+    footer {
+      padding: 40px 0;
+      border-top: 1px solid var(--border);
+      text-align: center;
+    }
+
+    footer p {
+      color: var(--text-dim);
+      font-size: 0.9rem;
+    }
+
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    /* Status Badge */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: rgba(234, 179, 8, 0.15);
+      border: 1px solid rgba(234, 179, 8, 0.3);
+      border-radius: 100px;
+      font-size: 0.8rem;
+      color: #eab308;
+      margin-top: 16px;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .hero-content {
+        grid-template-columns: 1fr;
+        text-align: center;
+      }
+
+      .hero h1 {
+        font-size: 2.8rem;
+      }
+
+      .hero-description {
+        margin: 0 auto 32px;
+      }
+
+      .hero-buttons {
+        justify-content: center;
+      }
+
+      .hero-visual {
+        display: none;
+      }
+
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .tech-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .journey-content {
+        grid-template-columns: 1fr;
+      }
+
+      .topics-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .nav-links {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+
+  <nav>
+    <div class="container">
+      <a href="#" class="logo">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#0a0a0f" stroke-width="2.5">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+          </svg>
+        </div>
+        ctrl+w
+      </a>
+      <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#tech">Tech Stack</a></li>
+        <li><a href="#learning">Learning</a></li>
+        <li><a href="#topics">Topics</a></li>
+      </ul>
+      <a href="https://github.com/yasinhajilou/chartify" target="_blank" class="btn btn-secondary">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+        </svg>
+        GitHub
+      </a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-content">
+        <div class="hero-text">
+          <div class="hero-badge">Portfolio Project</div>
+          <h1>Real-time sync.<br><span>ctrl+w</span></h1>
+          <p class="hero-description">
+            A secure web app for instantly sending text and files between your devices. 
+            Built to demonstrate production-ready engineering patterns for co-op interviews.
+          </p>
+          <div class="hero-buttons">
+            <a href="https://github.com/yasinhajilou/chartify" target="_blank" class="btn btn-primary">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+              </svg>
+              View Source Code
+            </a>
+            <a href="#features" class="btn btn-secondary">Explore Features</a>
+          </div>
+          <div class="status-badge">
+            <span>🚧</span> In Development — Dec 2024
+          </div>
+        </div>
+        <div class="hero-visual">
+          <div class="device-demo">
+            <div class="device device-phone">
+              <div class="device-screen">
+                <div class="device-msg sent">Hello from phone! 📱</div>
+                <div class="device-msg received">Got it on laptop ✓</div>
+              </div>
+            </div>
+            <div class="sync-line"></div>
+            <div class="sync-dot"></div>
+            <div class="device device-laptop">
+              <div class="device-screen">
+                <div class="device-msg received">Hello from phone! 📱</div>
+                <div class="device-msg sent">Got it on laptop ✓</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section id="features">
+    <div class="container">
+      <span class="section-label">// Features</span>
+      <h2 class="section-title">Why recruiters should care</h2>
+      <p class="section-description">
+        This isn't just another CRUD app. ctrl+w demonstrates real engineering challenges 
+        that come up in production systems.
+      </p>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+          </div>
+          <h3>JWT Authentication</h3>
+          <p>Access & refresh tokens with secure rotation, bcrypt hashing, and role-based access control.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+            </svg>
+          </div>
+          <h3>Real-Time WebSockets</h3>
+          <p>Bidirectional sync using Socket.io rooms. Handle disconnections, reconnections, and race conditions.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <path d="M3 9h18M9 21V9"/>
+            </svg>
+          </div>
+          <h3>Session Lifecycle</h3>
+          <p>6-digit pairing codes, auto-expiring sessions, and background cleanup jobs using cron.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </div>
+          <h3>Cloud File Storage</h3>
+          <p>Cloudinary integration with 4MB limits, secure upload handling, and automatic cleanup.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+          </div>
+          <h3>Interview-Ready</h3>
+          <p>Comes with system design docs, whiteboard diagrams, and 20+ technical Q&A for interviews.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round">
+              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+            </svg>
+          </div>
+          <h3>Production Quality</h3>
+          <p>Jest tests, ESLint, CI/CD with GitHub Actions, and Vercel deployment ready.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tech Stack -->
+  <section id="tech" class="tech-section">
+    <div class="container">
+      <span class="section-label">// Tech Stack</span>
+      <h2 class="section-title">Built with modern tools</h2>
+      <p class="section-description">
+        A carefully chosen stack that mirrors what companies actually use in production.
+      </p>
+      <div class="tech-grid">
+        <div class="tech-item">
+          <div class="name">Node.js + Express</div>
+          <div class="desc">Backend API</div>
+        </div>
+        <div class="tech-item">
+          <div class="name">MongoDB Atlas</div>
+          <div class="desc">Database</div>
+        </div>
+        <div class="tech-item">
+          <div class="name">Socket.io</div>
+          <div class="desc">WebSockets</div>
+        </div>
+        <div class="tech-item">
+          <div class="name">JWT</div>
+          <div class="desc">Authentication</div>
+        </div>
+        <div class="tech-item">
+          <div class="name">Cloudinary</div>
+          <div class="desc">File Storage</div>
+        </div>
+        <div class="tech-item">
+          <div class="name">bcrypt</div>
+          <div class="desc">Password Hashing</div>
+        </div>
+        <div class="tech-item">
+          <div class="name">Vanilla JS</div>
+          <div class="desc">Frontend</div>
+        </div>
+        <div class="tech-item">
+          <div class="name">Jest</div>
+          <div class="desc">Testing</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Learning Journey -->
+  <section id="learning">
+    <div class="container">
+      <span class="section-label">// Learning Approach</span>
+      <h2 class="section-title">Designed for deep understanding</h2>
+      <div class="journey-content">
+        <div class="journey-text">
+          <h3>Built line-by-line with Claude AI</h3>
+          <p>
+            This project was architected collaboratively with Claude (Anthropic's AI assistant) 
+            to ensure every design decision is intentional, well-documented, and interview-ready.
+          </p>
+          <p>
+            Every non-trivial piece of code includes explanations, diagrams, common pitfalls, 
+            and exercises — turning this project into both a portfolio piece and a learning resource.
+          </p>
+          <ul class="learning-list">
+            <li>Teaching notes on every major file</li>
+            <li>Architecture reasoning for complex sections</li>
+            <li>Interview prep questions after each module</li>
+            <li>Common mistakes and how to avoid them</li>
+          </ul>
+          <div class="claude-badge">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Designed with Claude AI</span>
+          </div>
+        </div>
+        <div class="code-preview">
+          <div class="code-header">
+            <span class="code-dot red"></span>
+            <span class="code-dot yellow"></span>
+            <span class="code-dot green"></span>
+          </div>
+          <div class="code-body">
+            <span class="comment">// Teaching Note: Why JWT over sessions?</span><br>
+            <span class="comment">// JWTs are stateless - no server memory</span><br>
+            <span class="comment">// needed. Perfect for distributed systems.</span><br><br>
+            <span class="keyword">const</span> token = <span class="function">jwt.sign</span>(<br>
+            &nbsp;&nbsp;{ userId, role },<br>
+            &nbsp;&nbsp;<span class="string">process.env.JWT_SECRET</span>,<br>
+            &nbsp;&nbsp;{ expiresIn: <span class="string">'15m'</span> }<br>
+            );<br><br>
+            <span class="comment">// Interview Q: Why 15 minutes?</span><br>
+            <span class="comment">// Short-lived tokens limit damage if leaked.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Topics Covered -->
+  <section id="topics">
+    <div class="container">
+      <span class="section-label">// Interview Topics</span>
+      <h2 class="section-title">Skills demonstrated</h2>
+      <p class="section-description">
+        Every feature maps to real interview questions and system design discussions.
+      </p>
+      <div class="topics-grid">
+        <div class="topic-card">
+          <span class="topic-number">01</span>
+          <div>
+            <h4>System Design</h4>
+            <p>Pairing codes, session lifecycle, real-time sync architecture, and scalability considerations.</p>
+          </div>
+        </div>
+        <div class="topic-card">
+          <span class="topic-number">02</span>
+          <div>
+            <h4>Security Best Practices</h4>
+            <p>JWT rotation, bcrypt, input validation, rate limiting, and secure file uploads.</p>
+          </div>
+        </div>
+        <div class="topic-card">
+          <span class="topic-number">03</span>
+          <div>
+            <h4>Real-Time Communication</h4>
+            <p>WebSocket handshakes, room management, handling disconnections, and state synchronization.</p>
+          </div>
+        </div>
+        <div class="topic-card">
+          <span class="topic-number">04</span>
+          <div>
+            <h4>Database Design</h4>
+            <p>MongoDB schemas, indexing strategies, TTL for auto-expiry, and efficient queries.</p>
+          </div>
+        </div>
+        <div class="topic-card">
+          <span class="topic-number">05</span>
+          <div>
+            <h4>DevOps & CI/CD</h4>
+            <p>GitHub Actions, environment management, Jest testing, and Vercel deployment.</p>
+          </div>
+        </div>
+        <div class="topic-card">
+          <span class="topic-number">06</span>
+          <div>
+            <h4>Background Jobs</h4>
+            <p>Cron scheduling, cleanup tasks, handling expired sessions, and file garbage collection.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <div class="container">
+      <h2>Ready to explore the code?</h2>
+      <p>Check out the GitHub repo for full source code, documentation, and interview prep materials.</p>
+      <div class="cta-buttons">
+        <a href="https://github.com/yasinhajilou/chartify" target="_blank" class="btn btn-primary">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
+          View on GitHub
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <p>
+        Built by <a href="https://github.com/yasinhajilou/" target="_blank">Yasin Hajilou</a> · 
+        Software Development Student at Seneca Polytechnic · 
+        Co-op Ready Summer 2026
+      </p>
+    </div>
+  </footer>
+</body>
+</html>
